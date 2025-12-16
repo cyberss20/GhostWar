@@ -3,7 +3,7 @@
 GhostWar - Advanced Vulnerability Scanner & Exploitation Framework
 Intelligence Cyber Force (ICF)
 GitHub: https://github.com/cyberss20/GhostWar
-Version: 6.0
+Version: 3.0
 """
 
 import requests
@@ -28,7 +28,16 @@ init(autoreset=True)
 # Global Configuration
 GITHUB_REPO = "cyberss20/GhostWar"
 GITHUB_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/"
-CURRENT_VERSION = "6.0"
+CURRENT_VERSION = "3.0"
+CONFIG_DIR = os.path.expanduser("~/.ghostwar")
+CONFIG_FILE = os.path.join(CONFIG_DIR, "configs.json")
+
+# Create config directory if not exists
+if not os.path.exists(CONFIG_DIR):
+    try:
+        os.makedirs(CONFIG_DIR)
+    except:
+        pass
 
 def show_loading_animation(message, duration=3):
     """Show loading animation"""
@@ -213,6 +222,209 @@ def update_menu():
         print(f"\n{Fore.YELLOW}[*] Open this URL in your browser")
     
     input(f"\n{Fore.CYAN}Press Enter to continue...")
+
+def save_configuration_profile(config, profile_name):
+    """Save configuration profile"""
+    try:
+        # Load existing profiles
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r') as f:
+                profiles = json.load(f)
+        else:
+            profiles = {}
+        
+        # Add new profile
+        profiles[profile_name] = {
+            'config': config,
+            'created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Save
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(profiles, f, indent=2)
+        
+        print(f"{Fore.GREEN}[+] Configuration profile '{profile_name}' saved!")
+        return True
+    except Exception as e:
+        print(f"{Fore.RED}[-] Error saving profile: {str(e)}")
+        return False
+
+def load_configuration_profile(profile_name):
+    """Load configuration profile"""
+    try:
+        if not os.path.exists(CONFIG_FILE):
+            return None
+        
+        with open(CONFIG_FILE, 'r') as f:
+            profiles = json.load(f)
+        
+        if profile_name in profiles:
+            return profiles[profile_name]['config']
+        else:
+            return None
+    except Exception as e:
+        print(f"{Fore.RED}[-] Error loading profile: {str(e)}")
+        return None
+
+def list_configuration_profiles():
+    """List all saved configuration profiles"""
+    try:
+        if not os.path.exists(CONFIG_FILE):
+            return []
+        
+        with open(CONFIG_FILE, 'r') as f:
+            profiles = json.load(f)
+        
+        return profiles
+    except Exception as e:
+        print(f"{Fore.RED}[-] Error listing profiles: {str(e)}")
+        return {}
+
+def delete_configuration_profile(profile_name):
+    """Delete a configuration profile"""
+    try:
+        if not os.path.exists(CONFIG_FILE):
+            return False
+        
+        with open(CONFIG_FILE, 'r') as f:
+            profiles = json.load(f)
+        
+        if profile_name in profiles:
+            del profiles[profile_name]
+            
+            with open(CONFIG_FILE, 'w') as f:
+                json.dump(profiles, f, indent=2)
+            
+            print(f"{Fore.GREEN}[+] Profile '{profile_name}' deleted!")
+            return True
+        else:
+            print(f"{Fore.RED}[-] Profile not found")
+            return False
+    except Exception as e:
+        print(f"{Fore.RED}[-] Error deleting profile: {str(e)}")
+        return False
+
+def configuration_manager_menu():
+    """Configuration manager menu"""
+    while True:
+        print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+        print(f"{Fore.CYAN}║          CONFIGURATION MANAGER                             ║")
+        print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+        
+        print(f"{Fore.GREEN}[1] Create New Configuration")
+        print(f"{Fore.GREEN}[2] View Saved Configurations")
+        print(f"{Fore.GREEN}[3] Load Configuration")
+        print(f"{Fore.GREEN}[4] Delete Configuration")
+        print(f"{Fore.GREEN}[5] Export Configuration")
+        print(f"{Fore.GREEN}[0] Back to Main Menu")
+        
+        choice = input(f"\n{Fore.YELLOW}Choice: ").strip()
+        
+        if choice == '0':
+            break
+        
+        elif choice == '1':
+            # Create new configuration
+            print(f"\n{Fore.CYAN}[*] Creating new configuration profile...")
+            
+            scanner = AdvancedScanner("http://localhost")
+            if scanner.configure_global_settings():
+                # Ask for profile name
+                profile_name = input(f"\n{Fore.YELLOW}Enter profile name: ").strip()
+                
+                if profile_name:
+                    if save_configuration_profile(scanner.config, profile_name):
+                        print(f"{Fore.GREEN}[+] Configuration saved successfully!")
+                else:
+                    print(f"{Fore.RED}[-] Invalid profile name")
+        
+        elif choice == '2':
+            # View saved configurations
+            profiles = list_configuration_profiles()
+            
+            if not profiles:
+                print(f"\n{Fore.YELLOW}[-] No saved configurations found")
+            else:
+                print(f"\n{Fore.CYAN}╔════════════════════════════════════════════════════════════╗")
+                print(f"{Fore.CYAN}║          SAVED CONFIGURATIONS                              ║")
+                print(f"{Fore.CYAN}╚════════════════════════════════════════════════════════════╝\n")
+                
+                for i, (name, data) in enumerate(profiles.items(), 1):
+                    config = data['config']
+                    created = data['created']
+                    
+                    print(f"{Fore.GREEN}[{i}] {name}")
+                    print(f"{Fore.CYAN}    Created: {created}")
+                    print(f"{Fore.CYAN}    Brute Force: {config.get('brute_force_mode', 'N/A').upper()}")
+                    print(f"{Fore.CYAN}    SQL Mode: {config.get('sql_attack_mode', 'N/A').upper()}")
+                    print(f"{Fore.CYAN}    Stealth: {'YES' if config.get('stealth_mode') else 'NO'}")
+                    print(f"{Fore.CYAN}    WAF Bypass: {'YES' if config.get('waf_bypass') else 'NO'}")
+                    print()
+        
+        elif choice == '3':
+            # Load configuration
+            profiles = list_configuration_profiles()
+            
+            if not profiles:
+                print(f"\n{Fore.YELLOW}[-] No saved configurations found")
+            else:
+                print(f"\n{Fore.CYAN}Available profiles:")
+                for i, name in enumerate(profiles.keys(), 1):
+                    print(f"{Fore.GREEN}[{i}] {name}")
+                
+                profile_name = input(f"\n{Fore.YELLOW}Enter profile name to load: ").strip()
+                
+                config = load_configuration_profile(profile_name)
+                if config:
+                    print(f"\n{Fore.GREEN}[+] Configuration '{profile_name}' loaded!")
+                    print(f"{Fore.YELLOW}[*] This configuration will be used in your next scan")
+                    
+                    # Display loaded config
+                    print(f"\n{Fore.CYAN}Loaded Configuration:")
+                    print(f"{Fore.CYAN}  Brute Force: {config.get('brute_force_mode', 'N/A').upper()}")
+                    print(f"{Fore.CYAN}  SQL Mode: {config.get('sql_attack_mode', 'N/A').upper()}")
+                    print(f"{Fore.CYAN}  Stealth: {'YES' if config.get('stealth_mode') else 'NO'}")
+                    print(f"{Fore.CYAN}  WAF Bypass: {'YES' if config.get('waf_bypass') else 'NO'}")
+                else:
+                    print(f"{Fore.RED}[-] Profile not found")
+        
+        elif choice == '4':
+            # Delete configuration
+            profiles = list_configuration_profiles()
+            
+            if not profiles:
+                print(f"\n{Fore.YELLOW}[-] No saved configurations found")
+            else:
+                print(f"\n{Fore.CYAN}Available profiles:")
+                for i, name in enumerate(profiles.keys(), 1):
+                    print(f"{Fore.GREEN}[{i}] {name}")
+                
+                profile_name = input(f"\n{Fore.YELLOW}Enter profile name to delete: ").strip()
+                
+                confirm = input(f"{Fore.RED}Are you sure? (y/n): ").strip().lower()
+                if confirm == 'y':
+                    delete_configuration_profile(profile_name)
+        
+        elif choice == '5':
+            # Export configuration
+            profiles = list_configuration_profiles()
+            
+            if not profiles:
+                print(f"\n{Fore.YELLOW}[-] No saved configurations found")
+            else:
+                export_file = f"ghostwar_configs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                try:
+                    import shutil
+                    shutil.copy2(CONFIG_FILE, export_file)
+                    print(f"\n{Fore.GREEN}[+] Configurations exported to: {export_file}")
+                except Exception as e:
+                    print(f"{Fore.RED}[-] Export failed: {str(e)}")
+        
+        else:
+            print(f"{Fore.RED}[-] Invalid choice!")
+        
+        input(f"\n{Fore.CYAN}Press Enter to continue...")
 
 class AdvancedScanner:
     def __init__(self, target_url):
@@ -3404,24 +3616,19 @@ file_put_contents('cookies.txt', $_GET['c']."\\n", FILE_APPEND);
         """Main scanning function"""
         # Print banner directly
         banner = f"""
-{Fore.RED}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣄⣠⣀⡀⣀⣠⣤⣤⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣄⢠⣠⣼⣿⣿⣿⣟⣿⣿⣿⣿⣿⣿⣿⣿⡿⠋⠀⠀⠀⢠⣤⣦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠰⢦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣟⣾⣿⣽⣿⣿⣅⠈⠉⠻⣿⣿⣿⣿⣿⡿⠇⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⢀⡶⠒⢉⡀⢠⣤⣶⣶⣿⣷⣆⣀⡀⠀⢲⣖⠒⠀⠀⠀⠀⠀⠀⠀
-⢀⣤⣾⣶⣦⣤⣤⣶⣿⣿⣿⣿⣿⣿⣽⡿⠻⣷⣀⠀⢻⣿⣿⣿⡿⠟⠀⠀⠀⠀⠀⠀⣤⣶⣶⣤⣀⣀⣬⣷⣦⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣦⣤⣦⣼⣀⠀
-⠈⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⠓⣿⣿⠟⠁⠘⣿⡟⠁⠀⠘⠛⠁⠀⠀⢠⣾⣿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠏⠙⠁
-⠀⠸⠟⠋⠀⠈⠙⣿⣿⣿⣿⣿⣿⣷⣦⡄⣿⣿⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀⣼⣆⢘⣿⣯⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡉⠉⢱⡿⠀⠀⠀⢀⡤
-⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣟⡿⠦⠀⠀⠀⠀⠀⠀⠀⠙⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⡗⠀⠈⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⣉⣿⡿⢿⢷⣾⣾⣿⣞⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠋⣠⠟⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⣿⣿⣿⠿⠿⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣾⣿⣿⣷⣦⣶⣦⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠈⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⣿⣤⡖⠛⠶⠤⡀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠁⠙⣿⣿⠿⢻⣿⣿⡿⠋⢩⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠧⣤⣦⣤⣄⡀⠀⠀⠀⠀⠀⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠘⣧⠀⠈⣹⡻⠇⢀⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣤⣀⡀⠀⠀⠀⠀⠀⠀⠈⢽⣿⣿⣿⣿⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠹⣷⣴⣿⣷⢲⣦⣤⡀⢀⡀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣿⣿⣿⣿⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣷⢀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠂⠛⣆⣤⡜⣟⠋⠙⠂⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣿⣿⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⠉⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣤⣾⣿⣿⣿⣿⣆⠀⠰⠄⠀⠉⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⡿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣿⡿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⠿⠿⣿⣿⣿⠇⠀⠀⢀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⡿⠛⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢻⡇⠀⠀⢀⣼⠗⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⠃⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠁⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠒⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+{Fore.CYAN}╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║     █████╗ ██████╗ ██╗   ██╗ █████╗ ███╗   ██╗ ██████╗     ║
+║    ██╔══██╗██╔══██╗██║   ██║██╔══██╗████╗  ██║██╔════╝     ║
+║    ███████║██║  ██║██║   ██║███████║██╔██╗ ██║██║          ║
+║    ██╔══██║██║  ██║╚██╗ ██╔╝██╔══██║██║╚██╗██║██║          ║
+║    ██║  ██║██████╔╝ ╚████╔╝ ██║  ██║██║ ╚████║╚██████╗     ║
+║    ╚═╝  ╚═╝╚═════╝   ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝     ║
+║                                                              ║
+║    Professional Vulnerability Scanner v3.0                  ║
+║    Target: {self.target[:40]:<40} ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
 {Style.RESET_ALL}"""
         print(banner)
         
@@ -3540,34 +3747,41 @@ file_put_contents('cookies.txt', $_GET['c']."\\n", FILE_APPEND);
 def print_main_menu():
     """Print main menu"""
     menu = f"""
-	{Fore.RED}
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣠⣤⣤⣤⡴⣶⣶⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⣴⣶⣿⣿⣿⣿⣿⣿⣷⣿⣶⣿⣧⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣄⣀⣀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣿⠿⠿⠛⠛⠛⠋⠉⠉⠉⠛⠛⠛⠛⠿⠟⠛⠛⠛⠛⠛⠛⠛⠛⠛⣻⣿⣿⠋⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⣠⣴⣿⣿⣿⠟⠋⠉⠀⠀⠀⠀⣀⣤⣄⢴⣖⣒⣂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣟⡁⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⣠⣾⣿⣿⠟⠋⠀⠀⠀⣀⣤⣦⣿⣿⣿⣿⣿⣯⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠴⠿⠿⠿⣿⣿⣷⣦⡀⠀⠀⠀⠀
-⠀⠀⠀⢰⣿⣿⡿⠁⠀⠀⠀⣀⣶⣿⣿⡟⠯⠍⠋⢁⣀⣠⣄⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠿⣶⣄⠀⠀
-⠀⠀⠀⢸⣿⣿⣿⣦⣤⣴⣿⣿⣟⣋⣡⣤⠴⠖⠋⢉⣽⣿⣿⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠧⡀
-⠀⠀⢠⣿⠟⠉⠁⠈⠉⠉⠙⠛⠛⠿⠿⣿⣿⣿⣿⣿⣿⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈
-⠀⢠⣿⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠽⠟⠛⠉⠀⢀⣀⣥⣴⣶⣶⣶⣶⣶⣶⣤⣤⣀⠀⠀⠀{Fore.GREEN}Intelligence Cyber Force (ICF){Fore.RED}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⣿⣿⣿⣷⣶⣦⣤⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠁⠂⠈⢉⠛⠿⣿⣿⣿⣶⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⢸⣿⠘⢿⣿⣿⠿⠛⠉⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⣤⣤⣤⣀⡀⠀⠀⠀⠀⠀⠀⠁⠀⠂⠽⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠈⣿⣴⣿⣿⣄⠀⠀⠀⠀⠀⣀⣠⣴⠶⣿⣿⠋⠉⠉⠉⠙⢻⣿⡆⠀⠀⠀⠀⠀⠀⣀⣴⣶⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⢹⣿⡍⠛⠻⢷⣶⣶⣶⠟⢿⣿⠗⠀⠹⠃⡀⠀⠀⠀⠀⠀⣿⡇⠀⠀⠀⢀⣴⣿⣿⣿⣿⠿⠿⠛⠛⠛⠛⠛⠂⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢻⡇⠀⠀⠀⢻⣽⣿⠀⠈⠛⠀⠀⠀⢹⠇⠀⠀⠀⠀⢶⣿⠇⠀⢀⣴⣿⣿⠿⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠁⠀⠀⠀⠀⠹⡇⠀⠀⠀⠀⠀⣀⡾⠀⠀⠀⠀⠀⢸⡿⠀⣠⣿⣿⡟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀  {Fore.GREEN}___  _   _  _____  ___  ____  _    _    __    ____{Fore.RED}⠀⠀ ⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁⠀⣦⠀⠀⢠⣿⢳⠀⠀⠀⠙⣿⣿⠁⢰⣿⡿⣻⡿⣦⡄⠀⠀⠀⠀⠀⠀⠀  {Fore.GREEN}/ __)( )_( )(  _  )/ __)(_  _)( \\/\\/ )  /__\\  (  _ \\{Fore.RED}⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠰⣿⣷⡾⠿⠃⢸⣷⣀⠀⢀⣾⠃⢀⣿⣿⣻⣿⡿⡯⣻⣣⡄⠀⠀⠀⠀ {Fore.GREEN}( (_-. ) _ (  )(_)( \\__ \\  )(   )    (  /(__)\\  )   /{Fore.RED}⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⠻⠷⢾⣿⣿⣷⡿⠁⠀⢸⣿⣟⡿⣏⣿⣿⣿⣯⣿⣗⣆⠀⠀  {Fore.GREEN}\\___/(_) (_)(_____)(___/ (__) (__/\\__)(__)(__)(_)\\_){Fore.RED}⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⢿⣷⣄⠀⠀⠉⠛⠀⠀⠀⢸⣿⡇⠈⠉⠛⢧⣝⣟⣯⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⣿⣦⣄⡀⠀⠀⠀⢸⣿⡇⠀⠀⠀⠀⠀⠀⠉⠙⠯⣯⣿⣿⣷⣆⡀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠿⣿⣶⣶⣾⣿⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⠻⠯⣿⣇⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠛⠛⠿⠧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠃⠀⠀⠀
-{Style.RESET_ALL}
+{Fore.RED}                                    0101010      0101010     010                                     
+                                   010101010101010101010  010 10                                    
+                                   010 v:43 01010101010101  010                                    
+                                   010     010101010101010101010                                    
+                                    010    01010101010101   0101                                  
+                                     0     0101010 010101010101010                                  
+                                  010   01010 0101 01010   010101 01                                 
+                                 010  01010 010101 0101010  010101010                                
+                                010  01010  010101  010101010101010                                
+                                0 10  01010 010 0101010101010101010                               
+                                 010 01010  010  0101010  010101     010                              
+                                 010  01010   010     010  01010101 0101                              
+                                 010 010101   010   010    010101010101                              
+                                 010  01010 0                01 0   010                               
+                                 010 {Fore.GREEN}Intelligence Cyber Force (ICF){Fore.RED} 010                                    
+                                 010   010101010             0     0                                  
+                                  0     01 01010             01  01                                
+                                     0   01 01010       01  010   0                                   
+                                     010      0101      010101010101                                  
+                                      0101       01     010101010101                                  
+                                       0101010             0101010 0                                  
+                                          01010      01       01                                      
+                                           01010101010    01                                          
+                                             01010101   010                                          
+                                               01 0101  01                                            
+                                                   010                                                 
+                                                    0                                                
+{Fore.GREEN} ___  _   _  _____  ___  ____  _    _    __    ____ 
+ / __)( )_( )(  _  )/ __)(_  _)( \\/\\/ )  /__\\  (  _ \\
+( (_-. ) _ (  )(_)( \\__ \\  )(   )    (  /(__)\\  )   /
+ \\___/(_) (_)(_____)(___/ (__) (__/\\__)(__)(__)(_)\\_)  
 
 {Fore.CYAN}════════════════════════════════════════════════════════════════
 {Fore.YELLOW}              MAIN MENU - EXPLOITATION FRAMEWORK
-{Fore.YELLOW}              Version: {CURRENT_VERSION} | GitHub: github.com/cyberss20/{GITHUB_REPO.split('/')[1]}
+{Fore.YELLOW}              Version: {CURRENT_VERSION} | GitHub: github.com/{GITHUB_REPO.split('/')[1]}
 {Fore.CYAN}════════════════════════════════════════════════════════════════
 
 {Fore.GREEN}[1] Full Scan (Recommended)
